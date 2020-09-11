@@ -1,11 +1,15 @@
 package mhz.algo.rbtree;
 
+import java.util.HashSet;
+import java.util.NoSuchElementException;
+import java.util.Set;
+
 public class RbTree {
     private RbTreeNode overallRoot;
-    private int size;
+    private Set<Integer> inserted;
 
     public int size() {
-        return this.size;
+        return inserted.size();
     }
 
     public RbTreeNode getOverallRoot() {
@@ -17,24 +21,12 @@ public class RbTree {
     }
 
     public RbTree (RbTreeNode root) {
+        this.inserted = new HashSet<>();
         this.overallRoot = root;
     }
 
     public boolean contains(int data) {
-        return containsHelper(overallRoot, data);
-    }
-
-    private boolean containsHelper(RbTreeNode root, int data) {
-        if (root != null) {
-            if (root.data == data) {
-                return true;
-            } else if (root.data > data) {
-                return containsHelper(root.left, data);
-            } else {
-                return containsHelper(root.right, data);
-            }
-        }
-        return false;
+        return inserted.contains(data);
     }
 
     public void insert(int data) {
@@ -42,7 +34,7 @@ public class RbTree {
             throw new IllegalArgumentException("Node is duplicate or empty");
         }
         overallRoot = insertHelper(overallRoot, data);
-        size++;
+        inserted.add(data);
     }
 
     private RbTreeNode insertHelper(RbTreeNode node, int data) {
@@ -88,8 +80,12 @@ public class RbTree {
             if (uncle != null && uncle.red) {
                 node.parent.red = false;
                 uncle.red = false;
-                node.parent.parent = repaintInsertion(node.parent.parent);// Recursively repaint grandfather
-            } else { // Uncle is black or empty
+                node.parent.parent.red = true; // Paint grandfather to red
+                if (node.parent.parent.parent == null) { // Root reached, repaint to black
+                    node.parent.parent.red = false;
+                }
+                repaintInsertion(node.parent.parent); // Recursively repaint grandfather
+            } else { // Uncle is black
                 if (node.parent.equals(node.parent.parent.left)
                         && node.equals(node.parent.left)) { // Left-left case
                     RbTreeNode tmp = node.parent.parent;
@@ -167,5 +163,51 @@ public class RbTree {
             }
         }
         return node;
+    }
+
+    public void delete(int data) {
+        if (!this.contains(data)) {
+            throw new NoSuchElementException("No such data found");
+        }
+        overallRoot = deleteHelper(overallRoot, data);
+        inserted.remove(data);
+    }
+
+    private RbTreeNode deleteHelper(RbTreeNode node, int data) {
+        if (node == null) {
+            return null;
+        } else {
+            RbTreeNode deleted;
+            while (true) {
+                if (node.data == data) {
+                    if (node.left == node.right) {
+                        if (node.equals(node.parent.left)) {
+                            node.parent.left = null;
+                        } else {
+                            node.parent.right = null;
+                        }
+                    }
+                    break;
+                } else if (node.data > data) {
+                    node = node.left;
+                } else {
+                    node = node.right;
+                }
+            }
+        }
+        return node;
+    }
+
+    @Override
+    public String toString() {
+        return toString(overallRoot);
+    }
+
+    private String toString(RbTreeNode node) {
+        if (node == null) {
+            return "";
+        } else {
+            return toString(node.left) + " " + node.data + (node.red ? ": red" : ": black") + " " + toString(node.right);
+        }
     }
 }
