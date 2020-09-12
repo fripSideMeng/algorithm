@@ -7,8 +7,11 @@ public class RbTreeTest {
     protected RbTree createTree() {
         return new RbTree();
     }
-    protected void checkInvariantRb(RbTree tree) {
+    protected void checkInvariantRb(@org.jetbrains.annotations.NotNull RbTree tree) {
         RbTreeNode root = tree.getOverallRoot();
+        if (!noSelfLoop(root)) {
+            fail("Self loop detected\n");
+        }
         if (checkBlackHeight(root) == -1) {
             fail("Black nodes invariant broken\n");
         }
@@ -42,6 +45,17 @@ public class RbTreeTest {
             return nonConsecutiveRed(node.left) && nonConsecutiveRed(node.right);
         }
     }
+    protected boolean noSelfLoop(RbTreeNode node) {
+        if (node == null) {
+            return true;
+        } else {
+            if (node.equals(node.left) || node.equals(node.right)) {
+                return false;
+            } else {
+                return noSelfLoop(node.left) && noSelfLoop(node.right);
+            }
+        }
+    }
     @Test
     public void check_size_when_empty() {
         RbTree emptyTree = createTree();
@@ -54,6 +68,13 @@ public class RbTreeTest {
         tree.insert(1);
         tree.insert(12);
         assertEquals(2, tree.size());
+    }
+    @Test
+    public void check_root_black() {
+        RbTree tree = createTree();
+        tree.insert(1);
+        RbTreeNode root = tree.getOverallRoot();
+        assertFalse(root.red);
     }
     @Test
     public void check_contains_valid() {
@@ -80,5 +101,39 @@ public class RbTreeTest {
         String expectedMessage = "Node is duplicate or empty";
         String actualMessage = e.getMessage();
         assertTrue(actualMessage.contains(expectedMessage));
+    }
+    @Test
+    public void check_delete_root() {
+        RbTree tree = createTree();
+        tree.insert(10);
+        tree.insert(15);
+        tree.insert(5);
+        tree.insert(12);
+        tree.delete(10);
+        checkInvariantRb(tree);
+        System.out.println(tree);
+    }
+    @Test
+    public void check_delete_oneIsRed() {
+        RbTree tree = createTree();
+        tree.insert(10);
+        tree.insert(5);
+        tree.insert(15);
+        tree.insert(11);
+        tree.insert(12);
+        tree.insert(13);
+        tree.delete(15);
+        System.out.println(tree);
+        checkInvariantRb(tree);
+    }
+    @Test
+    public void check_delete_after_batchInsert() {
+        RbTree tree = createTree();
+        for (int i = 0; i < 10; i++) {
+            tree.insert(i);
+        }
+        tree.delete(4);
+        System.out.println(tree);
+        checkInvariantRb(tree);
     }
 }
