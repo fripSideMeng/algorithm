@@ -1,15 +1,13 @@
 package mhz.algo.rbtree;
 
-import java.util.HashSet;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 public class RbTree {
     private RbTreeNode overallRoot;
-    private Set<Integer> inserted;
+    private int size;
 
     public int size() {
-        return inserted.size();
+        return this.size;
     }
 
     public RbTreeNode getOverallRoot() {
@@ -21,12 +19,24 @@ public class RbTree {
     }
 
     public RbTree (RbTreeNode root) {
-        this.inserted = new HashSet<>();
         this.overallRoot = root;
     }
 
     public boolean contains(int data) {
-        return inserted.contains(data);
+        return containsHelper(overallRoot, data);
+    }
+
+    public boolean containsHelper(RbTreeNode root, int data) {
+        if (root == null) {
+            return false;
+        }
+        if (root.data == data) {
+            return true;
+        } else if (root.data > data) {
+            return containsHelper(root.left, data);
+        } else {
+            return containsHelper(root.right, data);
+        }
     }
 
     public void insert(int data) {
@@ -34,7 +44,7 @@ public class RbTree {
             throw new IllegalArgumentException("Node is duplicate or empty");
         }
         overallRoot = insertHelper(overallRoot, data);
-        inserted.add(data);
+        size++;
         overallRoot.red = false;
     }
 
@@ -72,20 +82,18 @@ public class RbTree {
         }
     }
 
-    private RbTreeNode repaintInsertion(RbTreeNode node) {
+    private void repaintInsertion(RbTreeNode node) {
         if (!node.red || node.parent == null || node.parent.parent == null) {
-            return node;
+            return;
         }
         if (node.parent.red) {
             RbTreeNode uncle = node.parent.equals(node.parent.parent.left)
                                 ? node.parent.parent.right : node.parent.parent.left;
             if (uncle != null && uncle.red) {
                 node.parent.red = false;
-                uncle.red = false;
-                node.parent.parent.red = true; // Paint grandfather to red
-                if (node.parent.parent.parent == null) { // Root reached, repaint to black
-                    node.parent.parent.red = false;
-                }
+                uncle.red = false;// Paint grandfather to red
+                // Root reached, repaint to black
+                node.parent.parent.red = node.parent.parent.parent != null;
                 repaintInsertion(node.parent.parent); // Recursively repaint grandfather
             } else { // Uncle is black
                 if (node.parent.equals(node.parent.parent.left)
@@ -100,6 +108,9 @@ public class RbTree {
                         }
                     }
                     tmp.left = node.parent.right;
+                    if (tmp.left != null) {
+                        tmp.left.parent = tmp;
+                    }
                     node.parent.right = tmp;
                     tmp.parent = node.parent; // Rotation finished
                     node.parent.red = false;
@@ -110,6 +121,9 @@ public class RbTree {
                     node.parent.parent.left = node;
                     node.parent = node.parent.parent;
                     tmp.right = node.left;
+                    if (tmp.right != null) {
+                        tmp.right.parent = tmp;
+                    }
                     node.left = tmp;
                     tmp.parent = node; // Finished left rotation of parent node
                     tmp = node.parent;
@@ -122,6 +136,9 @@ public class RbTree {
                         }
                     }
                     tmp.left = node.right;
+                    if (tmp.left != null) {
+                        tmp.left.parent = tmp;
+                    }
                     node.right = tmp;
                     tmp.parent = node; // Rotation finished
                     node.right.red = true; // Repaint finished for the original grandparent
@@ -137,6 +154,9 @@ public class RbTree {
                         }
                     }
                     tmp.right = node.parent.left;
+                    if (tmp.right != null) {
+                        tmp.right.parent = tmp;
+                    }
                     node.parent.left = tmp;
                     tmp.parent = node.parent; // Rotation finished
                     node.parent.red = false;
@@ -146,6 +166,9 @@ public class RbTree {
                     RbTreeNode tmp = node.parent;
                     node.parent.parent.right = node;
                     tmp.left = node.right;
+                    if (tmp.left != null) {
+                        tmp.left.parent = tmp;
+                    }
                     node.right = tmp;
                     tmp.parent = node; // Finished rotation for parent node
                     tmp = node.parent;
@@ -158,13 +181,15 @@ public class RbTree {
                         }
                     }
                     tmp.right = node.left;
+                    if (tmp.right != null) {
+                        tmp.right.parent = tmp;
+                    }
                     node.left = tmp;
                     tmp.parent = node; // Rotation finished
                     node.left.red = true; // Repaint finished for the original grandparent
                 }
             }
         }
-        return node;
     }
 
     public void delete(int data) {
@@ -172,14 +197,15 @@ public class RbTree {
             throw new NoSuchElementException("No such data found");
         }
         overallRoot = deleteHelper(overallRoot, data);
-        inserted.remove(data);
-        overallRoot.red = false;
+        size--;
+        if (overallRoot != null) {
+            overallRoot.red = false;
+        }
     }
 
     private RbTreeNode deleteHelper(RbTreeNode node, int data) {
         RbTreeNode deleted;
         RbTreeNode deletedChild = null;
-        RbTreeNode sibling = null;
         while (true) {
             if (node.data == data) {
                 deleted = node;
@@ -189,10 +215,8 @@ public class RbTree {
                     }
                     if (node.equals(node.parent.left)) {
                         node.parent.left = null;
-                        sibling = node.parent.right;
                     } else {
                         node.parent.right = null;
-                        sibling = node.parent.left;
                     }
                 } else if (node.left == null) { // Has right child only
                     if (node.parent == null) { // Root is the deleted node
@@ -200,10 +224,8 @@ public class RbTree {
                     }
                     if (node.equals(node.parent.left)) {
                         node.parent.left = node.right;
-                        sibling = node.parent.right;
                     } else {
                         node.parent.right = node.right;
-                        sibling = node.parent.left;
                     }
                     node.right.parent = node.parent;
                     deletedChild = node.right;
@@ -213,42 +235,31 @@ public class RbTree {
                     }
                     if (node.equals(node.parent.left)) {
                         node.parent.left = node.left;
-                        sibling = node.parent.right;
                     } else {
                         node.parent.right = node.left;
-                        sibling = node.parent.left;
                     }
                     node.left.parent = node.parent;
                     deletedChild = node.left;
                 } else { // Both children not empty
-                    boolean fromLeft = false;
-                    if (node.parent != null) {
-                        fromLeft = node.equals(node.parent.left);
-                    }
                     RbTreeNode curr = node.right;
                     // Traverse to the leftmost node of right child
                     while (curr.left != null) {
                         curr = curr.left;
                     }
-                    RbTreeNode oldParent = curr.parent;
-                    curr.parent = node.parent;
-                    curr.left = node.left;
-                    curr.left.parent = curr;
-                    oldParent.left = curr.right; // Always coming from left
-                    // Prevent self loop condition
-                    curr.right = node.right.equals(curr) ? null : node.right;
-                    if (node.parent != null) {
-                        if (fromLeft) {
-                            node.parent.left = curr;
-                            sibling = node.parent.right;
-                        } else {
-                            node.parent.right = curr;
-                            sibling = node.parent.left;
+                    node.data = curr.data;
+                    deleted = curr;
+                    deletedChild = curr;
+                    if (node.right.equals(curr)) { // Prevent self-loop condition
+                        node.right = curr.right;
+                        if (node.right != null) {
+                            node.right.parent = node;
                         }
                     } else {
-                        return curr;
+                        curr.parent.left = curr.right;
+                        if (curr.parent.left != null) {
+                            curr.parent.left = curr.parent;
+                        }
                     }
-                    deletedChild = curr;
                 }
                 break;
             } else if (node.data > data) {
@@ -258,70 +269,185 @@ public class RbTree {
             }
         }
         RbTreeNode repaintStart;
-        boolean oneRed = (deleted.red && deletedChild == null)
-                || (deletedChild != null && (deleted.red || deletedChild.red));
+        boolean oneRed = node.red || (deletedChild != null && deletedChild.red);
         if (oneRed) {
             repaintStart = deletedChild == null ? deleted.parent : deletedChild;
             if (deletedChild != null) {
                 repaintStart.red = false; // Mark as black
             }
-            while (repaintStart.parent != null) {
-                repaintStart = repaintStart.parent;
-            }
         } else { // Both black
-            repaintStart = repaintDeletion(sibling);
-            while (repaintStart.parent != null) {
-                repaintStart = repaintStart.parent;
-            }
+            repaintStart = repaintDeletion(deleted);
+        }
+        while (repaintStart.parent != null) {
+            repaintStart = repaintStart.parent;
         }
         return repaintStart;
     }
 
-    private RbTreeNode repaintDeletion (RbTreeNode sibling) {
-        if (sibling.red) {
-            sibling.red = false;
-            RbTreeNode oldParent = sibling.parent;
-            if (sibling.equals(oldParent.left)) { // Left case
-                if (oldParent.parent == null) {
-                    sibling.parent = null;
-                    oldParent.left = sibling.right;
-                    sibling.right = oldParent;
-                    oldParent.parent = sibling;
-                } else { // Sibling's grandparent is not root
-                    boolean parentFromLeft = oldParent.equals(oldParent.parent.left);
+    private RbTreeNode repaintDeletion (RbTreeNode deleted) {
+        while (deleted.parent != null && !deleted.red) {
+            RbTreeNode sibling = getDeletedSibling(deleted);
+            if (!sibling.red) {
+                boolean notAllBlack = (sibling.left != null && sibling.left.red)
+                                        || (sibling.right != null && sibling.right.red);
+                if (!notAllBlack) { // Sibling and its children all black
+                    sibling.red = true;
+                    if (sibling.parent.red) {
+                        sibling.parent.red = false;
+                        return sibling;
+                    }
+                } else { // At least one child of sibling is red
+                    RbTreeNode oldParent = sibling.parent;
+                    boolean oldParentIsRed = oldParent.red; // Prevent changes in black height
+                    boolean oldParentFromLeft = false;
+                    if (oldParent.parent != null) {
+                        oldParentFromLeft = oldParent.equals(oldParent.parent.left);
+                    }
+                    if (sibling.equals(sibling.parent.left)) {
+                        if (sibling.left != null && sibling.left.red) { // Left-left case
+                            sibling.left.red = false;
+                            sibling.parent = oldParent.parent;
+                            if (sibling.parent != null) {
+                                if (oldParentFromLeft) {
+                                    sibling.parent.left = sibling;
+                                } else {
+                                    sibling.parent.right = sibling;
+                                }
+                            }
+                            oldParent.parent = sibling;
+                            oldParent.left = sibling.right;
+                            sibling.right = oldParent;
+                            sibling.right.red = false;
+                            if (sibling.right.left != null) {
+                                sibling.right.left.parent = oldParent;
+                            }
+                            sibling.red = oldParentIsRed;
+                            return sibling;
+                        } else { // Left-right case
+                            oldParent.left = sibling.right;
+                            sibling.right.parent = oldParent;
+                            sibling.right = sibling.right.left;
+                            if (sibling.right != null) {
+                                sibling.right.parent = sibling;
+                            }
+                            oldParent.left.left = sibling;
+                            sibling.parent = oldParent.left; // First rotation finished
+                            RbTreeNode newParent = oldParent.left;
+                            newParent.parent = oldParent.parent;
+                            if (oldParent.parent != null) {
+                                if (oldParentFromLeft) {
+                                    newParent.parent.left = newParent;
+                                } else {
+                                    newParent.parent.right = newParent;
+                                }
+                            }
+                            oldParent.parent = newParent;
+                            oldParent.left = newParent.right;
+                            oldParent.red = false;
+                            newParent.right = oldParent;
+                            if (newParent.right.left != null) {
+                                newParent.right.left.parent = newParent.right;
+                            }
+                            newParent.red = oldParentIsRed;
+                            return newParent;
+                        }
+                    } else {
+                        if (sibling.right != null && sibling.right.red) { // Right-right case
+                            sibling.right.red = false;
+                            sibling.parent = oldParent.parent;
+                            if (sibling.parent != null) {
+                                if (oldParentFromLeft) {
+                                    sibling.parent.left = sibling;
+                                } else {
+                                    sibling.parent.right = sibling;
+                                }
+                            }
+                            oldParent.parent = sibling;
+                            oldParent.right = sibling.left;
+                            sibling.left = oldParent;
+                            sibling.left.red = false;
+                            if (sibling.left.right != null) {
+                                sibling.left.right.parent = oldParent;
+                            }
+                            sibling.red = oldParentIsRed;
+                            return sibling;
+                        } else { // Right-left case
+                            oldParent.right = sibling.left;
+                            sibling.left.parent = oldParent;
+                            sibling.left = sibling.left.right;
+                            if (sibling.left != null) {
+                                sibling.left.parent = sibling;
+                            }
+                            oldParent.right.right = sibling;
+                            sibling.parent = oldParent.right; // First rotation finished
+                            RbTreeNode newParent = oldParent.right;
+                            newParent.parent = oldParent.parent;
+                            if (newParent.parent != null) {
+                                if (oldParentFromLeft) {
+                                    newParent.parent.left = newParent;
+                                } else {
+                                    newParent.parent.right = newParent;
+                                }
+                            }
+                            oldParent.parent = newParent;
+                            oldParent.right = newParent.left;
+                            oldParent.red = false;
+                            newParent.left = oldParent;
+                            if (newParent.left.right != null) {
+                                newParent.left.right.parent = newParent.left;
+                            }
+                            newParent.red = oldParentIsRed;
+                            return newParent;
+                        }
+                    }
+                }
+            } else { // Sibling is red
+                sibling.red = false;
+                RbTreeNode oldParent = sibling.parent;
+                if (sibling.equals(oldParent.left)) { // Left case
                     sibling.parent = oldParent.parent;
+                    if (sibling.parent != null) {
+                        if (oldParent.equals(sibling.parent.left)) {
+                            sibling.parent.left = sibling;
+                        } else {
+                            sibling.parent.right = sibling;
+                        }
+                    }
+                    oldParent.parent = sibling;
                     oldParent.left = sibling.right;
-                    sibling.right = oldParent;
+                    if (oldParent.left != null) {
+                        oldParent.left.red = true;
+                        oldParent.left.parent = oldParent;
+                    }
+                } else { // Right case
+                    sibling.parent = oldParent.parent;
+                    if (sibling.parent != null) {
+                        if (oldParent.equals(sibling.parent.left)) {
+                            sibling.parent.left = sibling;
+                        } else {
+                            sibling.parent.right = sibling;
+                        }
+                    }
                     oldParent.parent = sibling;
-                    if (parentFromLeft) {
-                        sibling.parent.left = sibling;
-                    } else {
-                        sibling.parent.right = sibling;
+                    oldParent.right = sibling.left;
+                    if (oldParent.right != null) {
+                        oldParent.right.red = true;
+                        oldParent.right.parent = oldParent;
                     }
                 }
-            } else { // Right case
-                if (oldParent.parent == null) {
-                    sibling.parent = null;
-                    oldParent.right = sibling.left;
-                    sibling.left = oldParent;
-                    oldParent.parent = sibling;
-                    oldParent.right.red = true;
-                } else { // Sibling's grandparent is not root
-                    boolean parentFromLeft = oldParent.equals(oldParent.parent.left);
-                    sibling.parent = sibling.parent.parent;
-                    oldParent.right = sibling.left;
-                    sibling.left = oldParent;
-                    oldParent.parent = sibling;
-                    oldParent.right.red = true;
-                    if (parentFromLeft) {
-                        sibling.parent.left = sibling;
-                    } else {
-                        sibling.parent.right = sibling;
-                    }
-                }
+                return sibling;
             }
+            deleted = deleted.parent;
         }
-        return sibling;
+        return deleted;
+    }
+
+    private RbTreeNode getDeletedSibling(RbTreeNode deleted) {
+        if (deleted.parent.left == null) {
+            return deleted.parent.right;
+        }
+        return deleted.equals(deleted.parent.left)
+                ? deleted.parent.right : deleted.parent.left;
     }
 
     @Override

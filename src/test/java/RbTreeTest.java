@@ -1,6 +1,8 @@
 import mhz.algo.rbtree.RbTree;
 import mhz.algo.rbtree.RbTreeNode;
 import org.junit.Test;
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
+
 import static org.junit.Assert.*;
 
 public class RbTreeTest {
@@ -39,6 +41,9 @@ public class RbTreeTest {
             if (node.red) {
                 if ((node.left != null && node.left.red)
                     || (node.right != null && node.right.red)) { // Consecutive red detected
+                    System.out.println(node.right.data);
+                    System.out.println(node.data);
+                    System.out.println(node.red);
                     return false;
                 }
             }
@@ -114,26 +119,50 @@ public class RbTreeTest {
         System.out.println(tree);
     }
     @Test
-    public void check_delete_oneIsRed() {
+    public void check_delete_internal_after_batchInsert () {
         RbTree tree = createTree();
-        tree.insert(10);
-        tree.insert(5);
-        tree.insert(15);
-        tree.insert(11);
-        tree.insert(12);
-        tree.insert(13);
-        tree.delete(15);
-        System.out.println(tree);
-        checkInvariantRb(tree);
-    }
-    @Test
-    public void check_delete_after_batchInsert() {
-        RbTree tree = createTree();
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 7; i++) {
             tree.insert(i);
         }
         tree.delete(4);
         System.out.println(tree);
+        checkInvariantRb(tree);
+    }
+    @Test
+    public void check_delete_red_leaf_after_batchInsert() {
+        RbTree tree = createTree();
+        for (int i = 1; i < 5; i++) {
+            tree.insert(i);
+        }
+        tree.delete(4);
+        System.out.println(tree);
+        checkInvariantRb(tree);
+    }
+    @Test
+    public void check_delete_black_sibling_black_leaf_after_batchInsert() {
+        RbTree tree = createTree();
+        for (int i = 1; i < 89; i++) {
+            tree.insert(i);
+        }
+        tree.delete(2);
+        checkInvariantRb(tree);
+    }
+    @Test
+    public void check_delete_root_after_batchInsert1() {
+        RbTree tree = createTree();
+        for (int i = 1; i < 15; i++) {
+            tree.insert(i);
+        }
+        tree.delete(tree.getOverallRoot().data);
+        checkInvariantRb(tree);
+    }
+    @Test
+    public void check_delete_root_after_batchInsert2() {
+        RbTree tree = createTree();
+        for (int i = 1; i < 91; i++) {
+            tree.insert(i);
+        }
+        tree.delete(tree.getOverallRoot().data);
         checkInvariantRb(tree);
     }
 }
